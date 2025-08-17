@@ -14,14 +14,8 @@ python main.py
 python -m pytest tests/ -v
 
 # Run specific test file
-python -m pytest tests/test_mcp_tools_nat.py -v
+python -m pytest tests/test_mcp_tools_instance.py -v
 
 # Run with coverage (if you have pytest-cov installed)
 python -m pytest tests/ --cov=ops --cov-report=html
 ```
-
-
-# TODO
-
-## implement more interface
-- working on it
