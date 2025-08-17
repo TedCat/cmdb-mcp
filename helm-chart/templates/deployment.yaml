@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cmdb-mcp.fullname" . }}
+  labels:
+    {{- include "cmdb-mcp.labels" . | nindent 4 }}
+spec:
+{{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      {{- include "cmdb-mcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "cmdb-mcp.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "cmdb-mcp.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "2"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/instance
+                operator: In
+                values:
+                - {{ .Release.Name }}
+            topologyKey: kubernetes.io/hostname
+      containers:
+        - name: "{{ .Chart.Name }}-{{ .Release.Name }}-python"
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.nodejs.repository }}:{{ .Values.image.nodejs.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.nodejs.pullPolicy }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep","45"]
+          resources:
+            {{- toYaml .Values.resources.nodejs | nindent 12 }}
+          env:
+            - name: TZ
+              value: Asia/Shanghai
+          envFrom:
+            - secretRef:
+                name: {{ .Values.envFromSecret.secretRef }}
+      volumes:
+        - name: share-volume-log
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
